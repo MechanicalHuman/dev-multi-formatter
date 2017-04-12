@@ -1,0 +1,28 @@
+[
+  {
+    "id": "tools",
+    "children": [
+      { "caption": "-" },
+      { "caption": "Format Code", "command": "multi_format" },
+      { "caption": "-" }
+    ]
+  },
+  {
+    "id": "preferences",
+    "children": [
+      {
+        "id": "package-settings",
+        "children": [
+          {
+            "caption": "MultiFormat",
+            "command": "edit_settings",
+            "args": {
+              "base_file": "${packages}/MultiFormat/MultiFormat.sublime-settings",
+              "default": "{\n\t$0\n}\n"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]
