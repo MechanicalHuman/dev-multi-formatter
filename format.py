@@ -1,299 +1,347 @@
 import os
-import subprocess
 import codecs
 import tempfile
 import sys
-import re
+
+from subprocess import PIPE
+from subprocess import Popen
+
+from re import sub
 
 import sublime
 import sublime_plugin
 
-SETTINGS_FILE = 'MultiFormat.sublime-settings'
-FORMATTER = 'multiformat'
+# ───────────────────────────────  Constants  ──────────────────────────────────
+
+PLUGIN_PATH = os.path.join(sublime.packages_path(), os.path.dirname(os.path.realpath(__file__)))
+
+PLUGIN_NAME = 'MultiFormat'
+PLUGIN_CMD_NAME = 'multi_format'
+
+SETTINGS_FILE = '{0}.sublime-settings'.format(PLUGIN_NAME)
+PROJECT_SETTINGS_KEY = 'multiformat'
+
+PACKAGE_JSON = 'package.json'
+
+FIND_UP_LIMIT = 5
+
+# ───────────────────────────  Settings Getters  ───────────────────────────────
+
+def get_setting(view, key, default_value=None):
+    settings = view.settings().get(PLUGIN_NAME)
+    if settings is None or settings.get(key) is None:
+        settings = sublime.load_settings(SETTINGS_FILE)
+    value = settings.get(key, default_value)
+    # check for project-level overrides:
+    project_value = get_project_setting(key)
+    if project_value is None:
+        return value
+    return project_value
+
+def get_project_setting(key):
+    project_settings = sublime.active_window().active_view().settings()
+    if not project_settings:
+        return None
+    multi_format_settings = project_settings.get(PROJECT_SETTINGS_KEY)
+    if multi_format_settings and key in multi_format_settings:
+        return multi_format_settings[key]
+    return None
+
+def debug_enabled(view):
+    return bool(get_setting(view, 'debug', False))
 
 
+# ─────────────────────────────────  View  ─────────────────────────────────────
+
+def scroll_view_to(view, row_no, col_no):
+    # error positions are offset by -1
+    # prettier -> sublime text
+    row_no -= 1
+    col_no -= 1
+
+    textpoint = view.text_point(row_no, col_no)
+    view.sel().clear()
+    view.sel().add(sublime.Region(textpoint))
+    view.show_at_center(textpoint)
+
+def get_current_view():
+    window = sublime.active_window()
+    active_view = window.active_view()
+    if active_view:
+        return active_view
+    return False
+
+# ──────────────────────────────  Directories  ─────────────────────────────────
+
+def get_sublime_project_path():
+    window = sublime.active_window()
+    folders = window.folders()
+    if len(folders) == 1:
+        return folders[0]
+    else:
+        active_file_name = get_current_file_path()
+        if active_file_name:
+            for folder in folders:
+                if active_file_name.startswith(folder):
+                    return folder
+    return False
+
+def get_npm_project_path():
+    current_file = get_current_file_path()
+    if current_file:
+        project = find_file_path(current_file, PACKAGE_JSON, FIND_UP_LIMIT)
+        if project:
+            return project
+    return False
+
+def get_user_home_path():
+    return os.path.expanduser('~')
+
+# ──────────────────────────────  ENVIROMENT  ──────────────────────────────────
+def get_exec_path(base_path):
+
+    paths = []
+
+    if base_path:
+        projectPath = os.path.join(base_path,'node_modules', '.bin')
+        if path_exists(projectPath):
+            paths.append(projectPath)
+
+    # Finally add the current ENV Path
+    envPath = os.environ['PATH']
+    envPaths = envPath.split(os.pathsep)
+
+    return os.pathsep.join(paths + envPaths)
+
+# ─────────────────────────────  Current File  ─────────────────────────────────
+
+def get_current_file_path():
+    window = sublime.active_window()
+    active_view = window.active_view()
+    if active_view:
+        active_file_name = active_view.file_name()
+    else:
+        active_file_name = None
+    if active_file_name:
+        return get_file_abs_dir(active_file_name)
+    return False
 
 
-class PluginUtils:
-	def get_pref(key, default=None):
-		return sublime.load_settings(SETTINGS_FILE).get(key, default)
-	def set_pref(key,value):
-		sublime.load_settings(SETTINGS_FILE).set(key, value)
-		sublime.save_settings(SETTINGS_FILE)
-	def log_lines(data):
-		lines = data.splitlines();
-		for line in lines:
-			PluginUtils.log(line)
-	def debug(data):
-		if PluginUtils.get_pref('debug'):
-			PluginUtils.log(data)
-	def log(data):
-			print('MultiFormatter: '+ str(data))
-	def protectString(data):
-		return '"'+data+'"'
-	def ensure_defaults():
-		defaults = {
-			'debug':False,
-			'format_on_save': False,
-			'bash': '/bin/bash',
-			'paths': [],
-			'command_map':{},
-			'json_max_line': 70,
-			'json_sort_options': []
-		}
-		for key, value in defaults.items():
-			if PluginUtils.get_pref(key) == None:
-				PluginUtils.set_pref(key,value)
+# ──────────────────────────  File System Helpers  ─────────────────────────────
+
+def path_exists(path):
+    if not path:
+        return False
+    if os.path.exists(path):
+        return True
+    return False
+
+def get_file_abs_dir(filepath):
+    return os.path.abspath(os.path.dirname(filepath))
+
+# ────────────────────────────────  Logging  ───────────────────────────────────
+
+def log(msg):
+    print("{0} | {1}".format(PLUGIN_NAME, msg))
+
+def log_debug(msg):
+    if debug_enabled(get_current_view()):
+        log(msg)
+    return
+
+def add_header(header, msg):
+    return "{0}: {1}".format(str(header), str(msg))
+
+
+def status_message(msg):
+    log(msg)
+    sublime.set_timeout(lambda: sublime.status_message('{0}: {1}'.format(PLUGIN_NAME, msg)), 0)
+
+def log_lines(data, header='out', log_level=log):
+    lines = str(data).splitlines()
+    for line in lines:
+        log_level(add_header(header,line))
+
+
 
 class MultiFormatCommand(sublime_plugin.TextCommand):
 
-	def run(self, edit):
-		PluginUtils.ensure_defaults()
-		if sys.platform == 'darwin':
-			# Store the PATH
-			old_path = os.environ['PATH']
-			# Store the View Position
-			view_position = self.view.viewport_position()
-			# Get the contents of the current File
-			view_data = sublime.Region(0, self.view.size())
-			# Make a Temporal copy of the file:
-			# Reason: 'hnp-format' does not support reading from the stdin
-			temp_file = self.create_tmp(view_data)
-			# Check if the Syntax of the file has a command mapping
-			command = self.get_tool_command()
-			if command:
-				# Syncronically execute 'hnp-format'
-				# TODO: execute Asyncronically
-				formatter = self.exec(command,temp_file)
-				# Check if 'hnp-format' returned as 0(success)
-				if formatter == 0:
-					# if returned as 0 read the Temporal copy
-					formated_RawData = codecs.open(temp_file, mode='r', encoding='utf-8')
-					formated_data = formated_RawData.read()
-					formated_RawData.close()
-					# TODO: See if the Temporal copy is empty, which meant an uncaught erroneous execution of the 'hnp-format' tool.
-					# Compare if the contents of the Temporal copy differ from the ones in the current View.
-					if formated_data != view_data:
-						self.view.replace(edit, view_data, formated_data)
-						self.view.set_viewport_position(view_position, False)
-						PluginUtils.log('Formatted ' + os.path.basename(temp_file) + ' as ' + command)
-					else:
-						PluginUtils.log(os.path.basename(temp_file) + ' as ' + command + 'did not required formatting')
-				else:
-					PluginUtils.log('ERROR ' + os.path.basename(temp_file) + ' as ' + command)
-			# Delete the Temporal File
-			os.remove(temp_file)
-			# Restore the PATH
-			os.environ['PATH'] = old_path
-		else:
-			PluginUtils.log('MultiFormat is OSX exclusive')
+    def run(self, edit):
+        if sys.platform == 'darwin':
+            view = self.view
+            source_file_path = self.view.file_name()
 
-	def create_tmp(self, region):
-		buffer_text = self.view.substr(region)
-		temp_file_name = self.get_file_name()
-		if not temp_file_name:
-			temp_file_name = 'formatter.tmp'
-		temp_file_path = tempfile.gettempdir() +'/'+ temp_file_name
-		temp_file = codecs.open(temp_file_path, mode='w', encoding='utf-8')
-		temp_file.write(buffer_text)
-		temp_file.close()
-		return temp_file_path
+            # We need a saved file to do this.
+            if source_file_path is None:
 
-	def get_tool_command(self):
-		syntax = self.view.settings().get('syntax')
-		syntax = os.path.basename(syntax)
-		syntax = os.path.splitext(syntax)[0]
-		syntax = syntax.strip().lower()
-		command_map = PluginUtils.get_pref('command_map', {})
-		command = command_map.get(syntax)
-		if not command:
-			command = 'null'
-			command_map[syntax] = command
-			PluginUtils.set_pref('command_map', command_map)
-			PluginUtils.debug('Added \''+syntax+'\' as \'null\' to the command mappings for convinience')
-		if command == 'null':
-			PluginUtils.debug(self.get_file_name() + ' (as '+syntax+') has not a valid '+FORMATTER+' <command> mapping')
-			return False
-		if command:
-			PluginUtils.debug(self.get_file_name() + ' (as '+syntax+') -> '+ FORMATTER +' <'+command+'>')
-			return command
-		return False
+                result = sublime.yes_no_cancel_dialog(
+                    '{0}\n\n'
+                    'File must first be Saved.'.format(PLUGIN_NAME),
+                    'Save...', "Don't Save")
+                if result == sublime.DIALOG_YES:
+                    self.view.run_command('save')
 
-	def get_file_name(self):
-		file_name = self.view.file_name()
-		if file_name:
-			file_name = os.path.basename(file_name)
-			return file_name
-		return False
+            # Re-check if file was saved, in case user canceled or closed the save dialog:
+            if source_file_path is None:
+                return status_message('Save canceled.')
 
-	def get_project_path(self):
-		project_path = self.view.window().project_file_name()
-		if project_path:
-			project_path = os.path.dirname(project_path)
-		return project_path
+            # we will need a CWD for calling the tools.
+            # Is the file in a NPM project??
+            project = find_file_path(source_file_path, PACKAGE_JSON, FIND_UP_LIMIT)
 
-	def get_exec_path(self):
-		paths = PluginUtils.get_pref('paths', [])
-		if self.get_project_path():
-			paths.append(os.path.join(self.get_project_path(),'node_modules', '.bin'))
-		paths.append(os.path.join('/usr/local', 'bin'))
-		return os.pathsep.join(paths)
+            # maybe is in a sublime project
+            if project is False:
+                project = get_sublime_project_path()
 
-	def get_json_options(self):
-		# Get the filename
-		file_name = self.get_file_name()
-		# Get the test options
-		tests = PluginUtils.get_pref('json_sort_options')
-		# Create an empty dictionary
-		order = {}
-		# Check if we have a filename
-		# Reason: The tests use the filename for matching
-		if file_name:
-			for test in tests:
-				# Get the regExp string
-				match = test.get('match', False)
-				# if no regExp string, Break
-				if not match:
-					break
-				# if the regExp string is not of type 'str', Break
-				if type(match) is not str:
-					break
-				# Escape the special characters in the regExp string
-				# EX: .json -> \.json
-				match = re.escape(match)
-				# Set the regExp string to anchor at the end
-				# EX: \.json -> \.json$
-				match = match+'$'
-				# Compile the test as a regExp
-				test_pattern = re.compile(match)
-				# Will break at first match.
-				# TODO: Find a way to match the closest value instead of the first match.
-				# TODO: Research on 'Leven' implementations on python
-				if test_pattern.match(os.path.basename(file_name)):
-					PluginUtils.debug('[Match] filename: \''+file_name+'\' against RegEx: \''+match+'\'')
-					order['sort'] = test.get('sort')
-					order['max_line'] = test.get('max_line')
-					break
-				else:
-					PluginUtils.debug('[Fail] filename: \''+file_name+'\' against RegEx: \''+match+'\'')
+            # Default to the dirname
+            if project is False:
+                project = get_file_abs_dir(source_file_path)
 
-		# Coerce the values before returning the dictionary
 
-		# order['sort']
-		# if order['sort'] is not in the dictionary set is as False
-		if not order.get('sort', False):
-			order['sort'] = False
-		# if order['sort'] is a list, make it a str
-		if type(order['sort']) is list:
-			order['sort'] = ','.join(order['sort'])
-		# if order['sort'] is not a str or a bool make it false and log an error
-		if (type(order['sort']) is not str) and (type(order['sort']) is not bool):
-			PluginUtils.log('order[\'sort\'] can only be a string, an array or a boolean, got: '+str(type(order['sort'])))
-			order['sort'] = False
+            print('----------------------------------------------------')
 
-		# order['max_line']
-		# if order['sort'] is not in the dictionary set as the json_max_line preference value
-		if not order.get('max_line', False):
-			order['max_line'] = PluginUtils.get_pref('json_max_line')
-		# if order['sort'] is not an int set as the json_max_line preference value
-		if type(order['max_line']) is not int:
-			order['max_line'] = PluginUtils.get_pref('json_max_line')
-		# coerce as str before returning
-		order['max_line'] = str(order['max_line'])
+            log_debug(add_header('file', source_file_path))
+            log_debug(add_header('cwd', project))
 
-		return order
+            # Get the current view code
+            region = sublime.Region(0, self.view.size())
+            source = self.view.substr(region)
 
-	def exec(self, command, file_path):
-		# Build the ENV of the sub-shell
-		# Copy the ENV from the current executing context
-		exec_env = os.environ.copy()
-		# Extend the PATH with common used PATHS
-		# See: #get_exec_path()
-		exec_env['PATH'] = self.get_exec_path()
-		# Add DEBUG accordingly to the plug-in preferences
-		if PluginUtils.get_pref('debug'):
-			# hnp-format uses the prefix 'Autoformat'
-			# NOTE: The * enables the whole namespace
-			# EX: Autoformat:javascript will be active too
-			exec_env['DEBUG'] = 'MultiFormat*'
+            # Fail if nothing to do
+            if str_empty_or_whitespace_only(source):
+                return status_message('Nothing to format in file.')
 
-		# Get the sub-shell
-		# TODO: learn to trust my own pref checker and stop providing a default value to the getter.
-		exec_shell = PluginUtils.get_pref('bash','/bin/bash')
+            tmp_file = self.create_tmp(source, source_file_path, project)
 
-		# Set up the shell command
-		# EX: hnp-format <command> [options] <filepath>
-		# create an empty array
-		cmd = []
-		# append the hnp-format executable
-		cmd.append(FORMATTER)
-		# append the <command>
-		cmd.append(command)
-		# append the [options]
+            commands = False
+            scopename = view.scope_name(view.sel()[0].b)
 
-		# option --chdir <path>
-		# Used by hnp-format to locate the rc-files from the internal tools
-		# EX: esformatter.js looks for a .esformatter file in the CWD
-		project_path = self.get_project_path()
-		if project_path:
-			cmd.append('--chdir')
-			cmd.append(PluginUtils.protectString(project_path))
+            if scopename.startswith('source.js'):
+                commands = [
+                    ['prettier', tmp_file, '--write'],
+                    ['standard', tmp_file, '--fix']
+                ]
 
-		# if the command is 'json' look for syntax specific options
-		if command == 'json':
-			# Get the options
-			# See: #get_json_options()
-			options = self.get_json_options()
+            if scopename.startswith('source.json'):
+                commands = [
+                    ['prettier', tmp_file, '--write', '--parser', 'json']
+                ]
 
-			# option --sort <sortOrder>
-			# If present hnp-format will sort the keys of the object
-			# NOTE: The sorting has a recursion of 3 levels
-			if options['sort']:
-				cmd.append('--sort')
-				cmd.append(PluginUtils.protectString(options['sort']))
+            if commands is False:
+                os.remove(tmp_file)
+                return status_message('Not a Supported file')
 
-			# option --max-line <int>
-			# If present hnp-format will use the value to set the maximum fixed character width.
-			# See: https://github.com/gre/json-beautify#with-80-fixed-spaces
-			cmd.append('--max-line')
-			cmd.append(options['max_line'])
-		# option --silent
-		# Avoid excessive logging
-		cmd.append('--silent')
-		# append the <filepath>
-		cmd.append(PluginUtils.protectString(file_path))
+            exec_env = os.environ.copy()
+            exec_env['PATH'] = get_exec_path(project)
 
-		# cast the array as a command string
-		cmd = ' '.join(cmd)
-		PluginUtils.debug(cmd)
 
-		# Execute
-		# if success return 0
-		try:
-			output = subprocess.check_output(
-				[exec_shell, '-l', '-c', cmd],
-				stderr=subprocess.STDOUT,
-				stdin=None,
-				startupinfo=None,
-				env=exec_env,
-				shell=False
-				)
-			PluginUtils.log_lines(output.decode('utf-8'))
-			return 0
-		# if error return 1
-		except subprocess.CalledProcessError as err:
-		 	PluginUtils.log_lines(err.output.decode('utf-8'))
-		 	return 1
+            for command in commands:
+                results = self.format_code(command, exec_env, project)
+
+            if self.erroed is True:
+                os.remove(tmp_file)
+                return status_message('ERROR Formating the file')
+
+            formated_file = codecs.open(tmp_file, mode='r', encoding='utf-8')
+            transformed = formated_file.read()
+            formated_file.close()
+            os.remove(tmp_file)
+
+            if trim_trailing_ws_and_lines(transformed) == trim_trailing_ws_and_lines(source):
+                return status_message('File already formatted.')
+
+            view.replace(edit, region, transformed)
+            status_message('File formatted.')
+
+        else:
+            log_warn('MultiFormat is OSX exclusive')
+
+    def create_tmp(self, buffer_text, source_file_name, project_path):
+        tmp_file_name = os.path.basename(source_file_name)
+        temp_file_path = project_path +'/00000.tmp.'+ tmp_file_name
+        temp_file = codecs.open(temp_file_path, mode='w', encoding='utf-8')
+        temp_file.write(buffer_text)
+        temp_file.close()
+        return temp_file_path
+
+    def format_code(self, cmd, env, cwd):
+        self.erroed = False
+
+        try:
+            log_debug(add_header('Command',list_to_str(cmd)))
+            proc = Popen(
+                cmd,
+                stderr=PIPE,
+                stdout=PIPE,
+                stdin=None,
+                cwd=cwd,
+                env=env,
+                shell=False
+                )
+
+            stdout, stderr = proc.communicate()
+
+            if proc.returncode != 0:
+                # self.erroed = True
+                log('ERROR ON COMMAND')
+                log_lines(stdout.decode('utf-8'), 'out')
+                log_lines(stderr.decode('utf-8'), 'err')
+                return False
+            if stderr:
+                log_lines(stderr.decode('utf-8'), 'err')
+            if stdout:
+                log_lines(stdout.decode('utf-8'), 'out', log_debug)
+            return True
+
+        except OSError as ex:
+            sublime.error_message('{0} - {1}'.format(PLUGIN_NAME, ex))
+            raise
 
 class MultiFormatEventListeners(sublime_plugin.EventListener):
-	@staticmethod
-	def on_pre_save(view):
-		if PluginUtils.get_pref('format_on_save'):
-			view.run_command('multi_format')
+    @staticmethod
+    def on_pre_save(view):
+        if PluginUtils.get_pref('format_on_save'):
+            view.run_command('multi_format')
 
 
 
+# ─────────────────────────────────  Utils  ────────────────────────────────────
+
+def climb_dirs(start_dir, limit=None):
+
+    right = True
+
+    while right and (limit is None or limit > 0):
+        yield start_dir
+        start_dir, right = os.path.split(start_dir)
+
+        if limit is not None:
+            limit -= 1
+
+def find_file_path(start_dir, filename, limit=None):
+    for d in _climb_dirs(start_dir, limit=limit):
+        target = os.path.join(d, filename)
+        if os.path.exists(target):
+            return d
+    return False
+
+def str_empty_or_whitespace_only(txt):
+    if not txt or len(txt) == 0:
+        return True
+    # strip all whitespace/invisible chars to determine textual content:
+    txt = sub(r'\s+', '', txt)
+    if not txt or len(txt) == 0:
+        return True
+    return False
+
+def trim_trailing_ws_and_lines(val):
+    if val is None:
+        return val
+    val = sub(r'\s+\Z', '', val)
+    return val
 
 
+def list_to_str(list_to_convert):
+    return ' '.join(str(l) for l in list_to_convert)
 
 

@@ -1,44 +1,5 @@
 {
-  "debug": false,
-  "format_on_save": false,
-  "bash": "/usr/local/bin/bash",
-  "paths": [],
-  "command_map": {
-    "css": "css",
-    "javascript": "javascript",
-    "javascript (babel)": "javascript",
-    "json": "json",
-    "less": "less",
-    "markdown": "markdown",
-    "markdown (standard)": "markdown",
-    "markdown extended": "markdown",
-    "multimarkdown": "markdown",
-    "pug": "pug",
-    "scss": "scss",
-    "sublime settings": "json",
-    "yaml": "yaml"
-  },
-  "json_max_line": 70,
-  "json_sort_options": [
-    { "match": ".sublime-keymap", "max_line": 160, "sort": "file:sublime-keymap.json" },
-    { "match": "Preferences.sublime-settings", "max_line": 100, "sort": "file:sublime-settings.json" },
-    { "match": "ecosystem.json", "max_line": 60, "sort": "file:pm2-ecosystem.json" },
-    { "match": "package.json", "max_line": 60, "sort": "lib:sort-package-json" },
-    {
-      "match": "Autoformatter.sublime-settings",
-      "max_line": 120,
-      "sort": [
-        "debug",
-        "format_on_save",
-        "bash",
-        "paths",
-        "command_map",
-        "json_max_line",
-        "json_sort_options",
-        "match",
-        "max_line",
-        "sort"
-      ]
-    }
-  ]
+  "debug": true,
+  "format_on_save": true,
+  "bash": "/usr/local/bin/bash"
 }
