@@ -1,5 +1,13 @@
 {
-  "debug": true,
-  "format_on_save": true,
-  "bash": "/usr/local/bin/bash"
+    "debug": true,
+    "format_on_save": false,
+    "formatters": {
+        "javascript (babel)": [
+            "prettier %file --write",
+            "standard %file --fix"
+        ],
+        "json": ["prettier %file --write --parser json"],
+        "json (npm)": [],
+        "markdown": ["prettier %file --write --parser markdown"]
+    }
 }
