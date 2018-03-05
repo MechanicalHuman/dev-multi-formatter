@@ -2,12 +2,24 @@
     "debug": true,
     "format_on_save": false,
     "formatters": {
+        "css": ["prettier %file --write --parser css"],
         "javascript (babel)": [
             "prettier %file --write",
             "standard %file --fix"
         ],
-        "json": ["prettier %file --write --parser json"],
-        "json (npm)": [],
+        "javascript (webpack)": [
+            "prettier %file --write",
+            "standard %file --fix"
+        ],
+        "json (babel)": ["prettier %file --write --parser json"],
+        "json (composer)": ["prettier %file --write --parser json"],
+        "json (eslint)": ["prettier %file --write --parser json"],
+        "json (postcss)": ["prettier %file --write --parser json"],
+        "json (puglint)": ["prettier %file --write --parser json"],
+        "json (settings)": ["prettier %file --write --parser json"],
+        "json (stylelint)": ["prettier %file --write --parser json"],
+        "json (sublime)": ["prettier %file --write --parser json"],
+        "json (tern js)": ["prettier %file --write --parser json"],
         "markdown": ["prettier %file --write --parser markdown"]
     }
 }
