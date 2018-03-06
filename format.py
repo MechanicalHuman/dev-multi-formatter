@@ -311,8 +311,8 @@ class MultiFormatCommand(sublime_plugin.TextCommand):
 
         transformed = self.read_tmp(tmp_file)
 
-        if trimWhiteSpace(transformed) == trimWhiteSpace(source):
-            return status_message('File already formatted.')
+        # if trimWhiteSpace(transformed) == trimWhiteSpace(source):
+        #     return status_message('File already formatted.')
 
         self.view.replace(edit, region, transformed)
         self.view.set_viewport_position(position, False)

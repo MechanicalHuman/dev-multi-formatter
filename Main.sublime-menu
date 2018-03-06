@@ -1,28 +1,24 @@
 [
-  {
-    "id": "tools",
-    "children": [
-      { "caption": "-" },
-      { "caption": "Format Code", "command": "multi_format" },
-      { "caption": "-" }
-    ]
-  },
-  {
-    "id": "preferences",
-    "children": [
-      {
-        "id": "package-settings",
+    {
+        "id": "tools",
+        "children": [{ "caption": "-" }, { "caption": "Format Code", "command": "multi_format" }, { "caption": "-" }]
+    },
+    {
+        "id": "preferences",
         "children": [
-          {
-            "caption": "MultiFormat",
-            "command": "edit_settings",
-            "args": {
-              "base_file": "${packages}/multi-formatter/MultiFormat.sublime-settings",
-              "default": "{\n\t$0\n}\n"
+            {
+                "id": "package-settings",
+                "children": [
+                    {
+                        "caption": "MultiFormat",
+                        "command": "edit_settings",
+                        "args": {
+                            "base_file": "${packages}/multi-formatter/MultiFormat.sublime-settings",
+                            "default": "{\n\t$0\n}\n"
+                        }
+                    }
+                ]
             }
-          }
         ]
-      }
-    ]
-  }
+    }
 ]
