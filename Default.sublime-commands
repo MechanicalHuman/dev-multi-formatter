@@ -1,0 +1,10 @@
+[
+    {
+        "caption": "Format File",
+        "command": "multi_format"
+    },
+    {
+        "caption": "Toggle Format on Save",
+        "command": "multi_format_toggle_auto"
+    }
+]

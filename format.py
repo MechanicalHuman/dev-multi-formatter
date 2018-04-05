@@ -51,11 +51,8 @@ def get_setting(key, default_value=None):
     return project_value
 
 def get_project_setting(key):
-    project_settings = sublime.active_window().active_view().settings()
-    if not project_settings:
-        return None
-    multi_format_settings = project_settings.get(PROJECT_SETTINGS_KEY)
-
+    data = sublime.active_window().project_data() or {}
+    multi_format_settings = data.get(PROJECT_SETTINGS_KEY, {})
     if multi_format_settings and key in multi_format_settings:
         return multi_format_settings[key]
     return None
@@ -372,6 +369,12 @@ class MultiFormatCommand(sublime_plugin.TextCommand):
         except OSError as ex:
             sublime.error_message('{0} - {1}'.format(PLUGIN_NAME, ex))
             raise
+
+class MultiFormatToggleAutoCommand(sublime_plugin.TextCommand):
+    def run(self, edit):
+        current = get_setting('format_on_save', False)
+        sublime.load_settings(SETTINGS_FILE).set('format_on_save', not current)
+        sublime.save_settings(SETTINGS_FILE)
 
 class MultiFormatEventListeners(sublime_plugin.EventListener):
     @staticmethod
