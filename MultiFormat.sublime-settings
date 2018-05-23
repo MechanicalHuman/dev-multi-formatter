@@ -3,18 +3,10 @@
     "format_on_save": false,
     "formatters": {
         "css": ["prettier %file --write --parser css"],
-        "javascript": ["prettier %file --write",],
+        "javascript": ["prettier %file --write"],
         "javascript (babel)": ["prettier %file --write"],
-        "javascript (webpack)": ["prettier %file --write"],
         "json": ["prettier %file --write --parser json"],
         "json (babel)": ["prettier %file --write --parser json"],
-        "json (composer)": ["prettier %file --write --parser json"],
-        "json (eslint)": ["prettier %file --write --parser json"],
-        "json (postcss)": ["prettier %file --write --parser json"],
-        "json (puglint)": ["prettier %file --write --parser json"],
-        "json (settings)": ["prettier %file --write --parser json"],
-        "json (stylelint)": ["prettier %file --write --parser json"],
-        "json (sublime)": ["prettier %file --write --parser json --print-width 160"],
         "markdown": ["prettier %file --write --parser markdown"]
     }
 }
