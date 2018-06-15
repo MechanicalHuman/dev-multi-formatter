@@ -15,14 +15,12 @@ import sublime_plugin
 # -------------------------------  Constants  ----------------------------------
 #
 
-PLUGIN_PATH = os.path.join(sublime.packages_path(), os.path.dirname(os.path.realpath(__file__)))
-
-PLUGIN_NAME = 'MultiFormat'
-PLUGIN_CMD_NAME = 'multi_format'
-
-SETTINGS_MAP = 'formatters'
+PLUGIN_PATH = os.path.dirname(os.path.realpath(__file__))
+PLUGIN_NAME = 'auto-formatter'
+PLUGIN_HEADER = 'format'
+SETTINGS_MAP = 'syntax_map'
 SETTINGS_FILE = '{0}.sublime-settings'.format(PLUGIN_NAME)
-PROJECT_SETTINGS_KEY = 'MultiFormat'
+PROJECT_SETTINGS_KEY = 'autoFormatter'
 
 PACKAGE_JSON = 'package.json'
 
@@ -89,10 +87,6 @@ def debug_enabled():
         return get_setting('debug', False)
     return False
 
-
-
-
-
 # ---------------------------------  View  -------------------------------------
 
 def get_current_view():
@@ -146,7 +140,7 @@ def get_npm_project_path():
 def get_exec_path(base_path):
 
     paths = []
-
+    plugin_paths = []
     if base_path:
         project_path = os.path.join(base_path,'node_modules', '.bin')
         if path_exists(project_path):
@@ -156,7 +150,12 @@ def get_exec_path(base_path):
     env_path = os.environ['PATH']
     env_paths = env_path.split(os.pathsep)
 
-    return os.pathsep.join(paths + env_paths)
+    plugin_path = os.path.join(PLUGIN_PATH,'node_modules', '.bin')
+
+    if path_exists(plugin_path):
+            plugin_paths.append(plugin_path)
+
+    return os.pathsep.join(paths + env_paths + plugin_paths)
 
 # -----------------------------  Current File  ---------------------------------
 
@@ -197,10 +196,10 @@ def get_file_abs_dir(filepath):
 
 def log(msg, header=None):
     if header is None:
-        print("{0} | {1}".format(PLUGIN_NAME, msg))
+        print("{0} | {1}".format(PLUGIN_HEADER, msg))
     else:
         msg = add_header(header, msg)
-        print("{0} | {1}".format(PLUGIN_NAME, msg))
+        print("{0} | {1}".format(PLUGIN_HEADER, msg))
 
 def log_debug(msg):
     if debug_enabled():
@@ -212,7 +211,7 @@ def add_header(header, msg):
 
 def status_message(msg):
     log(msg)
-    sublime.set_timeout(lambda: sublime.status_message('{0}: {1}'.format(PLUGIN_NAME, msg)), 0)
+    sublime.set_timeout(lambda: sublime.status_message('{0}: {1}'.format(PLUGIN_HEADER, msg)), 1)
 
 def log_lines(data, header='out', log_level=log):
     lines = str(data).splitlines()
@@ -259,7 +258,7 @@ class MultiFormatCommand(sublime_plugin.TextCommand):
             project = get_file_abs_dir(source_file_path)
 
 
-        print('----------------------------------------------------')
+        # print('----------------------------------------------------')
 
         log_debug(add_header('file', source_file_path))
         log_debug(add_header('cwd', project))
@@ -379,8 +378,6 @@ class MultiFormatEventListeners(sublime_plugin.EventListener):
     def on_pre_save(view):
         if get_setting('format_on_save', False):
             view.run_command('multi_format')
-
-
 
 # ---------------------------------  Utils  ------------------------------------
 

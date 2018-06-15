@@ -1,7 +1,11 @@
 [
     {
         "id": "tools",
-        "children": [{ "caption": "-" }, { "caption": "Format Code", "command": "multi_format" }, { "caption": "-" }]
+        "children": [
+            { "caption": "-" },
+            { "caption": "Format Code", "command": "multi_format" },
+            { "caption": "-" }
+        ]
     },
     {
         "id": "preferences",
@@ -10,10 +14,11 @@
                 "id": "package-settings",
                 "children": [
                     {
-                        "caption": "MultiFormat",
+                        "caption": "Auto Formatter",
                         "command": "edit_settings",
                         "args": {
-                            "base_file": "${packages}/multi-formatter/MultiFormat.sublime-settings",
+                            "base_file":
+                                "${packages}/multi-formatter/auto-formatter.sublime-settings",
                             "default": "{\n\t$0\n}\n"
                         }
                     }

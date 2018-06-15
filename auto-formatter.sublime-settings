@@ -1,0 +1,26 @@
+{
+    "debug": false,
+    "format_on_save": false,
+    "syntax_map": {
+        "css": ["prettier %file --write --parser css", "stylelint %file --fix"],
+        "javascript (babel)": ["prettier %file --write", "eslint %file --fix"],
+        "javascript (eslint)": ["prettier %file --write", "eslint %file --fix"],
+        "javascript (webpack)": [
+            "prettier %file --write",
+            "eslint %file --fix"
+        ],
+        "json": ["prettier %file --write --parser json"],
+        "json (babel)": ["prettier %file --write --parser json"],
+        "json (eslint)": ["prettier %file --write --parser json"],
+        "json (npm)": ["sort-package-json %file"],
+        "json (stylelint)": ["prettier %file --write --parser json"],
+        "markdown": ["prettier %file --write --parser markdown"],
+        "pug": ["pug-beautifier %file --overwrite"],
+        "pypug": ["pug-beautifier %file --overwrite"],
+        "sublime text commands": ["prettier %file --write --parser json"],
+        "sublime text keymap": ["prettier %file --write --parser json"],
+        "sublime text project": ["prettier %file --write --parser json"],
+        "sublime text settings": ["prettier %file --write --parser json"],
+        "sublime text menu": ["prettier %file --write --parser json"]
+    }
+}

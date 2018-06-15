@@ -1,0 +1,29 @@
+{
+  "name": "@mechanicalhuman/dev-multi-formatter",
+  "version": "0.0.1",
+  "description": "",
+  "homepage": "https://github.com/MechanicalHuman/dev-multi-formatter#readme",
+  "bugs": {
+    "url": "https://github.com/MechanicalHuman/dev-multi-formatter/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MechanicalHuman/dev-multi-formatter.git"
+  },
+  "license": "MIT",
+  "author": "Jorge Proaño <jorge@hiddennodeproblem.com> (https://www.hidden-node-problem.com/)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "eslint": "^4.19.1",
+    "prettier": "^1.13.5",
+    "pug-beautifier": "0.0.1",
+    "sort-package-json": "^1.15.0",
+    "stylelint": "^9.2.1"
+  }
+
+
+
+}

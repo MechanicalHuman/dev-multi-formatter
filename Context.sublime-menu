@@ -1,1 +1,9 @@
-[{ "caption": "-" }, { "caption": "Format Code", "command": "multi_format" }, { "caption": "-" }]
+[
+    { "caption": "-" },
+    { "caption": "Format Code", "command": "multi_format" },
+    {
+        "caption": "Toggle Format on Save",
+        "command": "multi_format_toggle_auto"
+    },
+    { "caption": "-" }
+]
