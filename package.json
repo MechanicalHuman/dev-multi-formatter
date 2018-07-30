@@ -18,12 +18,9 @@
   },
   "dependencies": {
     "eslint": "^4.19.1",
-    "prettier": "^1.13.5",
+    "prettier": "^1.14.0",
     "pug-beautifier": "0.0.1",
     "sort-package-json": "^1.15.0",
-    "stylelint": "^9.2.1"
+    "stylelint": "^9.4.0"
   }
-
-
-
 }
