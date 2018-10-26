@@ -1,0 +1,9 @@
+{
+  "name": "multi-formatter",
+  "url": "https://github.com/MechanicalHuman/multi-formatter/",
+  "description": "SublimeText MultiFormatter Plugin",
+  "sublime_text": "*",
+  "version": "0.0.2",
+  "platforms": ["*"],
+  "dependencies": []
+}

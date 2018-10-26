@@ -1,6 +1,7 @@
 {
   "name": "multi-formatter",
   "version": "0.0.1",
+  "private": true,
   "description": "SublimeText MultiFormatter Plugin",
   "homepage": "https://github.com/MechanicalHuman/dev-multi-formatter#readme",
   "bugs": {
@@ -8,7 +9,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:MechanicalHuman/dev-multi-formatter.git"
+    "url": "git@github.com:MechanicalHuman/multi-formatter.git"
   },
   "license": "MIT",
   "author": "Jorge Proaño <jorge@hiddennodeproblem.com> (https://www.hidden-node-problem.com)",

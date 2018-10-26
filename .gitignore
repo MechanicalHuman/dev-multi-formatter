@@ -1,7 +1,5 @@
 # PROJECT ESPECIFIC IGNORES #
 
-## Project Managment
-private
 
 # Node.js
 node_modules
@@ -19,5 +17,3 @@ Icon
 # sublime
 *.sublime-workspace
 
-# vagrant
-.vagrant
