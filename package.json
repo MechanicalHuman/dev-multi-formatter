@@ -1,6 +1,6 @@
 {
   "name": "multi-formatter",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "description": "SublimeText MultiFormatter Plugin",
   "homepage": "https://github.com/MechanicalHuman/dev-multi-formatter#readme",
